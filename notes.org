@@ -1,0 +1,25 @@
+_Design notes for MoCaml test framework_
+
+* Requirements
+  - Dependency Injection
+    - Need a way to "install" the newly created test doubles
+    - This might be useful as a standalone library
+    - Might provide multiple solutions
+      - First class modules and references
+      - First class modules and runtime lookup
+      - Functors?
+      - Link-time implementation swapping
+  - Test Double Creation
+  - Automatically generate an implemetation of an interface
+    - camlp4
+  - Mocks
+    - Expectations
+      - Should handle:
+        - Exceptions
+        - Function calls, both arguments and returns
+        - Counting events (at least once, exactly N times, etc.)
+        - How do we handle such rich expectations? We need more than
+          just a hash table lookup, since we need to deal with number
+          of times that an action is performed, etc.
+      - JMock will fail as soon as an expectation is violated, not
+        after a validation step. I think we should do this too.

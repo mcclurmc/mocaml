@@ -1,0 +1,6 @@
+begin program "fcm-test"
+   sort = true
+   comp = [ "-bin-annot" ]
+   files = [ "test.ml" "main.ml" "impl.ml" "globs.ml" "functor_test.ml" "dep.ml" "bench.ml" ]
+   requires = [ ]
+end
