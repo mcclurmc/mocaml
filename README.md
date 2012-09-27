@@ -18,5 +18,6 @@ eval `opam config -env`
 # Install ocp-build
 opam install ocp-build
 # Build a test program in this repo
+cd <path/to/mocaml>
 ocp-build fcm-test
 ```
