@@ -12,6 +12,7 @@ This library will be written for OCaml 4.0 (GADTs and new syntax for first class
 # Set up opam
 git clone git://github.com/OCamlPro/opam.git
 cd opam ; ./configure ; make ; sudo make install
+opam init ; opam update
 # Install and set up OCaml 4.0
 opam switch 4.00.0
 eval `opam config -env`
