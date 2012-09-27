@@ -6,12 +6,12 @@ This is currently a work in progress, and right now is little more than a scratc
 
 ## Building
 
-This library will be written for OCaml 4.0 (GADTs and new syntax for first class modules). We will also use ocp-build to build the library. The easiest way to get started with building this library is to us opam:
+This library will be written for OCaml 4.0 (GADTs and new syntax for first class modules). We will also use ocp-build to build the library. The easiest way to get started with building this library is to use opam:
 
 ```
 # Set up opam
 git clone git://github.com/OCamlPro/opam.git
-cd opam ; make ; sudo make install
+cd opam ; ./configure ; make ; sudo make install
 # Install and set up OCaml 4.0
 opam switch 4.00.0
 eval `opam config -env`
