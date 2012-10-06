@@ -1,0 +1,10 @@
+_build/
+_obuild/
+ocp-build.root.old
+a.out
+*.byte
+*.native
+*.asm
+*.cmo
+*.cmi
+*.cmx
