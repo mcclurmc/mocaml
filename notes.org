@@ -23,3 +23,106 @@ _Design notes for MoCaml test framework_
           of times that an action is performed, etc.
       - JMock will fail as soon as an expectation is violated, not
         after a validation step. I think we should do this too.
+
+* [2012-10-05 Fri] Can we recover types in camlp4?
+
+I don't know that we can recover types from camlp4. By this I mean
+that if we parse a function that was written as 'let f a = a+1', since
+the parameter a does not have a type specified, we won't be able to
+infer it from within a quotation. We could recover the types from
+module signatures, but that would require us to write signatures for
+all the modules we want to mock.
+
+We could do two things. One, we could use 'ocamlc -i' for each module
+we want to mock so that we can get the signature of the module, and
+iterate over that. I'm not sure that this is the best solution,
+though, but it's a start.
+
+Two, we could perhaps just rewrite the mocked module with "empty"
+function bodies, and coerce the new module to be of the same signature
+as the original. The problem is that we won't be able to build a
+datatype out of the direct types of the functions we want to
+mock. Perhaps we could just create polymorphic variants for each named
+function, and store values of these types in a table. I'm not sure how
+this would work, and it might make the syntax terribly cumbersome. We
+might be able to get around this, though. Something like:
+
+module Foo = struct let func1 a b = a + b end
+module MockFoo =
+struct
+  module type SIG_Foo = module type of Foo
+  module Expect =
+  struct
+    type f_name = | F_func1
+    let exp = Hashtbl.create 10
+    let func1 f = Hashtbl.add exp F_func1 (`Ty_func1 f)
+  end
+  module Foo : SIG_Foo =
+  struct
+    let func1 a b =
+        let `Ty_func1 f = Expect.(Hashtbl.find exp F_func1)
+        in f a b
+  end
+end
+
+Wow, I just compiled the above code! This might actually work.
+
+* [2012-10-12 Fri] Progress
+
+Found a good description of camlp4 tools by Nick Pouillard:
+
+http://nicolaspouillard.fr/camlp4-changes.html
+
+There are parsers, filters and printers. Parsers are for extending
+syntax, filters are for transforming ASTs, and printers are for
+printing ASTs. What we want to do is to take a file (probably an
+interface, but we might be limited to implementations) as input,
+inspect its AST, and output another file which implements the same
+interface as the first file. This sounds like we basically need a
+filter and a perhaps a printer.
+
+It seems that filters can only transform signatures to signatures, or
+structures to structures, but not cross the two, which is what we want
+to be able to do: create a mock implementation of a given
+interface. The camlp4 binary has the option to treat any given input
+file as either an implementation or an interface, regardless of what
+the file actually is. This might be a way for us to get around the
+'a->'a nature of filters. Alternatively, there may be a way to use a
+filter to process an AST, and then use a printer to output our OCaml
+code. Perhaps the right way to do this is instead to use a parser as
+the frontend, but I'm not quite sure yet.
+
+I do need to read the source code of type_conv, and read more code
+that uses type_conv. There may be something in it that we can use
+here.
+
+Thought: can we pack an mli file into a dummy structure, and then
+filter over that using a str_item filter? Nope, not with ocamlc -pack,
+which requires a cmo file, and fails with just a cmi file.
+
+** SUCCESS!
+
+Thanks to some mails from the OCaml list, I've got a way to filter
+over a signature, and then print out structure values. The key was to
+use Camlp4.PreCast.Printers.OCaml.print_implem to print the str_items
+we create, and use Obj.magic to cast the AstFilters.Ast types to
+PreCast types.
+
+I've also fixed the bug in the structure filter implementation of
+mock_foo.ml I whipped up the other day. We can do a membership test on
+the Hashtbl, and if the function hasn't been mocked, then we create
+another function which takes the right number of arguements, and then
+raises an exception of "No expectation found." Though I just realised
+that the real test of this is when we don't know the number of
+arguemnts in the function, so back to the drawing board on that -- or
+really just give up, because mocking from an mli file will be much
+easier.
+
+** Idea for expectations
+
+A mocked function should have the ability to record information in the
+expect module/object, such as the reason for a failure. So instead of
+just throwing an exception on error, we can do error reporting. Though
+we could just do failwith "foo", or create a custom exception with the
+loggin data we need, so this might not be such a killer feature.
+
