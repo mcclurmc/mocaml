@@ -4,6 +4,8 @@ FILTERS:=mock_filter.ml
 # $(FILTERS:.ml=.cmo): ${@:.cmo=.ml}
 # 	ocamlfind ocamlc -package camlp4.quotations.o -syntax camlp4o -c ${@:.cmo=.ml}
 
+default: foo_mock.ml
+
 mock_foo.cmo: mock_foo.ml
 	ocamlc.opt -c $<
 
