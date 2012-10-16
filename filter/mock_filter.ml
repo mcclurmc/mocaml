@@ -74,16 +74,7 @@ struct
 		method mock_sig mn =
 			<:str_item< module type $"SIG_" ^ mn$ = module type of $uid:mn$ >>
 
-		method module_expect = <:str_item<
-			module Expect = struct
-				$expect_excs$ ;
-				$self#f_name$ ;
-				$self#f_type$ ;
-				value $lid:hash_name$ = Hashtbl.create 10 ;
-			end
-		>>
-
-		method gen_mock_funcs =
+		method gen_expect_funcs =
 			let add_mock = <:str_item<
 				value add_mock fn ty = Hashtbl.add $lid:hash_name$ fn ty >> in
 			let fs = List.fold_left
@@ -91,16 +82,26 @@ struct
 					<:str_item<
 						$st$ ;
 						value $lid:f.name$ = fun
-							[ f -> add_mock $uid:"F_"^f.name$ ( $uid:"T_"^f.name$ f ) ] >>)
+							[ f -> add_mock $uid:f.f_name$ ( $uid:f.f_type$ f ) ] >>)
+							(* [ f -> add_mock $uid:"F_"^f.name$ ( $uid:"T_"^f.name$ f ) ] >>) *)
 				<:str_item< >>
 				funcs
 			in
 			<:str_item< $add_mock$ ; $fs$ >>
 
+		method module_expect = <:str_item<
+			module Expect = struct
+				$expect_excs$ ;
+				$self#f_name$ ;
+				$self#f_type$ ;
+				value $lid:hash_name$ = Hashtbl.create 10 ;
+				$self#gen_expect_funcs$ ;
+			end
+		>>
+
 		method module_mock = <:str_item<
 			module $mname$ = struct
 				include $uid:mname$ ;
-				$self#gen_mock_funcs$ ;
 			end
 		>>
 
@@ -108,7 +109,7 @@ struct
 			funcs <- List.rev funcs ;
 			<:str_item<
 			module $"Mock" ^ mname$ = struct
-				$self#mock_sig "Foo"$ ;
+				$self#mock_sig mname$ ;
 				$self#module_expect$ ;
 				$self#module_mock$ ;
 			end
@@ -116,33 +117,24 @@ struct
 
 		method print =
 			let pp a = P.print_implem @@ cast_str_item a in
-			pp self#module_outer ;
+			pp <:str_item<
+				$self#mock_sig mname$ ;
+				$self#module_expect$ ;
+				$self#module_mock$ ;
+			>>
 
 	end
 
-	let rec sig_filter = function
-		| <:sig_item< value $lid:bid$ : $typ:ts$ >> as st ->
-				(* let n = count_args ts in *)
-				(* Printf.printf "filtering sig %s, %d args...\n" bid n ; *)
-				let _loc = Ast.loc_of_sig_item st in
-				gen#add_func bid ts ;
-				<:str_item< >>
-		| st ->
-				let _loc = Ast.loc_of_sig_item st in
-				<:str_item< >>
-
-	(* and count_args = *)
-	(* 	let rec loop n = function *)
-	(* 	| <:ctyp< $t$ -> $ts$ >> -> loop (n+1) ts *)
-	(* 	| <:ctyp< $t$ >> -> n *)
-	(* 	in loop 0 *)
+	let sig_filter = function
+		| <:sig_item< value $lid:fn$ : $typ:ty$ >> ->
+				gen#add_func fn ty
+		| _ -> ()
 	;;
 
-  register_sig_item_filter @@ fun si ->
-    let _loc = Ast.loc_of_sig_item si in
-		let sis = Ast.list_of_sig_item si [] in
-		let _ = List.map sig_filter sis in
+  register_sig_item_filter @@ fun sg ->
+		List.iter sig_filter @@ Ast.list_of_sig_item sg [] ;
 		gen#print ;
+    let _loc = Ast.loc_of_sig_item sg in
 		<:sig_item< >>
   ;;
 
