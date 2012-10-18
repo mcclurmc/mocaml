@@ -8,3 +8,5 @@ a.out
 *.cmo
 *.cmi
 *.cmx
+filter/mockfoo
+filter/test_mockfoo
