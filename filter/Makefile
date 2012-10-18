@@ -4,10 +4,10 @@ FILTERS:=mock_filter.ml
 # $(FILTERS:.ml=.cmo): ${@:.cmo=.ml}
 # 	ocamlfind ocamlc -package camlp4.quotations.o -syntax camlp4o -c ${@:.cmo=.ml}
 
-default: foo_mock.ml
+default: test_mockfoo
 
-mock_foo.cmo: mock_foo.ml
-	ocamlc.opt -c $<
+# mock_foo.cmo: mock_foo.ml
+# 	ocamlc.opt -c $<
 
 mock_filter.cmo: mock_filter.ml
 	ocamlc.opt -I +camlp4 -c -pp camlp4orf $<
@@ -15,10 +15,17 @@ mock_filter.cmo: mock_filter.ml
 print.cmo: print.ml
 	ocamlc.opt -I +camlp4 -c -pp camlp4orf $<
 
-.PHONY: foo_mock.ml
-foo_mock.ml: foo.mli mock_filter.cmo
+mock_foo.cmo: foo.mli mock_filter.cmo
 	camlp4o mock_filter.cmo foo.mli
+	cat mock_foo.ml
+	ocamlc -c mock_foo.ml
 
 .PHONY: printer
 printer: print.cmo
 	camlp4 -printer $<
+
+foo.cmo: foo.ml foo.mli
+	ocamlc -c foo.ml
+
+test_mockfoo: foo.cmo mock_foo.cmo test_mockfoo.ml
+	ocamlc -o $@ $^
