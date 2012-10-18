@@ -126,3 +126,50 @@ just throwing an exception on error, we can do error reporting. Though
 we could just do failwith "foo", or create a custom exception with the
 loggin data we need, so this might not be such a killer feature.
 
+* [2012-10-17 Wed] Success!
+
+So I've worked out the filter to the point where we can generate an
+implementation file from an interface file. The whole thing isn't done
+yet, but the structure of both the filter code and the output of the
+filter is basically finished.
+
+We have a filter which iterates over a signature file, and builds up
+state in an object. The object has methods for generating the AST of
+the mocked module and the Expect module, which we use to set up the
+mock module for tests. Almost all of my initial mock_foo.ml skeleton
+has been implemented.
+
+Here are some thoughts about this work:
+
+  - Using templates. I thought about using template ml files to hold
+    code which could be included in the generated modules. Because
+    these files couldn't easily be compiled separately, since they
+    were missing dependencies of their own, this didn't work out. I
+    also ran into problems with including a template module too early,
+    and the Hashtbl type not being fully specified at that point. It
+    just didn't provide the benefit I was looking for.
+
+  - Inserting the mocked module's name. I'm still not sure how we'll
+    do this, since the sig filter won't know at filter time the name
+    of the module type it's operating on. My current idea is to use
+    the 'camlp4 -str <implem>' option to pass in some fragment,
+    say, 'let module_name = FooModule', on the command line, which
+    will let us run a str_filter along with the sig_filter. We could
+    pass in various options this way, I suppose. (Update: doesn't look
+    like this will work, because we can only operate on one sig/str
+    object at a time. You can't pass in a filename and a -str "".)
+
+  - Objects. Turns out that objects are surprisingly lightweight to
+    use. They seem to be the perfect thing to use here, since we need
+    to build up state while we're filtering, and then perform actions
+    on that state while generating the new module.
+
+  - Using revised syntax. There are a few good references about
+    revised syntax, but even they tell you to just print some sample
+    original syntax out as revised syntax for some tricker bits. The
+    command line tool to do this is 'camlp4orf foo.ml -printer r'.
+
+  - Using revised syntax for function quotations. You really can't do
+    <:str_item< value f a = a >>. Just do <:str_item< value f = fun [
+    a -> a ] >>.
+
