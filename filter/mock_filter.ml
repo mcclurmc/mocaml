@@ -36,10 +36,24 @@ struct
 			exception Invalid_expect ;
 			exception Not_implemented >>)
 
-		(* XXX: how will we get this name? *)
-		val mutable mname = "Foo"
+		val mutable mod_name = ""
+		val mutable mock_filename = ""
 		val mutable funcs = []
 		val hash_name = "e"
+
+		method mock_filename = mock_filename
+
+		method set_module_name _loc =
+			let upper_first str =
+				let c = Char.uppercase str.[0] in
+				str.[0] <- c in
+			let name =
+				let fn = Ast.Loc.file_name _loc in
+				let i = String.index fn '.' in
+				String.sub fn 0 i in
+			mock_filename <- ("mock_" ^ name ^ ".ml") ;
+			upper_first name ;
+			mod_name <- name
 
 		method add_func name ty =
 			let f_name = "F_" ^ name in
@@ -66,7 +80,7 @@ struct
 				then <:str_item< >>
 				else <:str_item< type f_type = [ $loop funcs$ ] >>
 
-		method mock_sig_name mn = "SIG_" ^ mn
+		method mock_sig_name mn = mn ^ "Sig"
 
 		method mock_sig mn =
 			<:str_item< module type $self#mock_sig_name mn$ =
@@ -125,9 +139,9 @@ struct
 			>>
 
 		method module_mock = <:str_item<
-				module $mname$ : $uid:self#mock_sig_name mname$ =
+				module $mod_name$ : $uid:self#mock_sig_name mod_name$ =
 				struct
-					include $uid:mname$ ;
+					include $uid:mod_name$ ;
 					$self#gen_mock_funcs$ ;
 				end
 			>>
@@ -135,16 +149,15 @@ struct
 		method module_outer =
 			funcs <- List.rev funcs ;
 			<:str_item<
-					$self#mock_sig mname$ ;
+					$self#mock_sig mod_name$ ;
 					$self#module_expect$ ;
 					$self#module_mock$ ;
 			>>
 
 		method print =
 			let pp a = P.print_implem
-				(* XXX: how do we get mock_foo.ml? *)
-				~output_file:"mock_foo.ml"
-				@@ cast_str_item a
+				~output_file:self#mock_filename
+				(cast_str_item a)
 			in pp self#module_outer ;
 	end
 
@@ -155,9 +168,10 @@ let sig_filter = function
 ;;
 
 register_sig_item_filter @@ fun sg ->
-	List.iter sig_filter @@ Ast.list_of_sig_item sg [] ;
-	gen#print ;
   let _loc = Ast.loc_of_sig_item sg in
+	gen#set_module_name _loc ;
+	List.iter sig_filter (Ast.list_of_sig_item sg []) ;
+	gen#print ;
 	<:sig_item< >>
 ;;
 
