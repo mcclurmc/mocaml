@@ -140,6 +140,9 @@ struct
 		method module_mock = <:str_item<
 				module $mod_name$ : $uid:self#mock_sig_name mod_name$ =
 				struct
+					(* XXX: instead of including original module, we should make sure
+					   to recreate everything that's exported by the interface, such
+					   as types and exceptions. Anything else? See notes.org. *)
 					include $uid:mod_name$ ;
 					$self#gen_mock_funcs$ ;
 				end
