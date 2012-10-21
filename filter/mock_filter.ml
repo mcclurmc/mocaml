@@ -61,7 +61,6 @@ struct
 			let argc = count_args ty in
 			funcs <- {name; ty; argc; f_name; f_type} :: funcs
 
-		(* XXX: merge f_name and f_type methods *)
 		method f_name =
 			let mk_cons f = <:ctyp< $uid:f.f_name$ >> in
 			let rec loop = function
