@@ -79,7 +79,7 @@ struct
 				then <:str_item< >>
 				else <:str_item< type f_type = [ $loop funcs$ ] >>
 
-		method mock_sig_name mn = mn ^ "Sig"
+		method mock_sig_name mn = String.uppercase (mn ^ "_SIG")
 
 		method mock_sig mn =
 			<:str_item< module type $self#mock_sig_name mn$ =
