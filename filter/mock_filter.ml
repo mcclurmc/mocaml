@@ -113,9 +113,9 @@ struct
 				value lookup_mock =
 					fun [ f ->
 						let open Expect in
-								if not (Hashtbl.mem e f)
+								if not (Hashtbl.mem $lid:hash_name$ f)
 								then raise Not_implemented
-								else Hashtbl.find e f ]
+								else Hashtbl.find $lid:hash_name$ f ]
 					>>
 			in
 			fold_str (fun f -> <:str_item< value $lid:f.name$ =
