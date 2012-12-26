@@ -39,7 +39,7 @@ struct
 		val mutable mod_name = ""
 		val mutable mock_filename = ""
 		val mutable funcs = []
-		val hash_name = "e"
+		val hash_name = "mocks"
 
 		method mock_filename = mock_filename
 
@@ -70,6 +70,15 @@ struct
 				then <:str_item< >>
 				else <:str_item< type f_name = [ $loop funcs$ ] >>
 
+    method f_name_list =
+      let mk_name f = <:expr< $uid:f.f_name$ >> in
+      let rec loop = function
+        | []    -> <:expr< [] >>
+        | f::fs -> <:expr< [ $mk_name f$ :: $loop fs$ ] >>
+      in if funcs == []
+        then <:str_item< >>
+        else <:str_item< value f_name_list = $loop funcs$ >>
+
 		method f_type =
 			let mk_cons f = <:ctyp< $uid:f.f_type$ of $f.ty$ >> in
 			let rec loop = function
@@ -79,7 +88,14 @@ struct
 				then <:str_item< >>
 				else <:str_item< type f_type = [ $loop funcs$ ] >>
 
-		method mock_sig_name mn = String.uppercase (mn ^ "_SIG")
+    method t_type = <:str_item<
+      type t = {
+        count : Hashtbl.t f_name int ;
+        funcs : Hashtbl.t f_name f_type ;
+        order : mutable list f_name
+      } >>
+
+    method mock_sig_name mn = String.uppercase (mn ^ "_SIG")
 
 		method mock_sig mn =
 			<:str_item< module type $self#mock_sig_name mn$ =
@@ -87,7 +103,7 @@ struct
 
 		method gen_expect_funcs =
 			let add_mock = <:str_item<
-				value add_mock fn ty = Hashtbl.add $lid:hash_name$ fn ty >> in
+				value add_mock fn ty = Hashtbl.add $lid:hash_name$.funcs fn ty >> in
 			let fs = fold_str1
 				(fun f -> <:str_item< value $lid:f.name$ = fun
 					[ f -> add_mock $uid:f.f_name$ ( $uid:f.f_type$ f ) ] >>)
@@ -112,27 +128,49 @@ struct
 			let lookup_mock = <:str_item<
 				value lookup_mock =
 					fun [ f ->
-						let open Expect in
-								if not (Hashtbl.mem $lid:hash_name$ f)
+						let open Mock in
+								if not (Hashtbl.mem $lid:hash_name$.funcs f)
 								then raise Not_implemented
-								else Hashtbl.find $lid:hash_name$ f ]
+								else
+                  let count = Hashtbl.find $lid:hash_name$.count f
+                  and func  = Hashtbl.find $lid:hash_name$.funcs f
+                  in do {
+                    $lid:hash_name$.order := [f :: $lid:hash_name$.order] ;
+                    Hashtbl.replace $lid:hash_name$.count f (count + 1) ;
+                    func
+                  } ]
 					>>
 			in
 			fold_str (fun f -> <:str_item< value $lid:f.name$ =
 					$build_fun f.argc
-						(<:expr< let open Expect in
+						(<:expr< let open Mock in
 												 let f = lookup_mock $uid:f.f_name$ in
 												 match f with
-														 [ $uid:f.f_type$ f -> $build_app f.argc "f"$
+														 [ $uid:f.f_type$ f ->
+                               $build_app f.argc "f"$
 														 | _ -> raise Invalid_expect ] >> )$ >> )
 				lookup_mock funcs
 
+    method gen_init = <:str_item<
+      value init = fun [ () ->
+        let mock = { count = Hashtbl.create 10 ;
+                     funcs = Hashtbl.create 10 ;
+                     order = [] } in
+        do { List.iter (fun [ fn ->
+          Hashtbl.add mock.count fn 0 ])
+             f_name_list ;
+             mock
+           } ] >>
+
 		method module_expect = <:str_item<
-				module Expect = struct
+				module Mock = struct
 					$expect_excs$ ;
 					$self#f_name$ ;
 					$self#f_type$ ;
-					value $lid:hash_name$ = Hashtbl.create 10 ;
+          $self#t_type$ ;
+          $self#f_name_list$ ;
+          $self#gen_init$ ;
+					value ($lid:hash_name$ : t) = init () ;
 					$self#gen_expect_funcs$ ;
 				end
 			>>
