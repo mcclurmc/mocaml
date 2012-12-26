@@ -24,7 +24,10 @@ mock_foo.cmo: foo.mli mock_filter.cmo
 printer: print.cmo
 	camlp4 -printer $<
 
-foo.cmo: foo.ml foo.mli
+foo.cmi: foo.mli
+	ocamlc -c foo.mli
+
+foo.cmo: foo.ml foo.cmi
 	ocamlc -c foo.ml
 
 test_mockfoo: foo.cmo mock_foo.cmo test_mockfoo.ml
