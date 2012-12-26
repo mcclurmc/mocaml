@@ -260,3 +260,38 @@ Problems with compiling mock_xapi_vm.mli:
     in our definition, and include them from the original module.
     Let's try testing mock_xapi_vm.ml now with any mocked polymorphic
     functions commented out.
+
+  - Woohoo, solution: We can enforce polymorphism using a record type
+    with polymorphic...
+
+* [2012-11-07 Wed] Expectation feature idea
+
+We should be able to set an expectation such that some function will
+be executed immediately after some mocked function has been
+called.
+
+The need for this feature came up when I was debugging CA-48768,
+vm-import cancel. There was a timing issue where we were only checking
+for cancellation every ten seconds, so if you cancelled the operation
+ten seconds before it finished, the operation might continue on. The
+code in question is ocaml/xapi/import.ml:1329.
+
+What I want is to be able to mock out Stream_vdi (among other
+dependencies), and after the call to Stream_vdi.recv_all, the
+expectation framework would cancel the task, and we would then make
+sure that the function 'cleanup on_cleanup_stack' was called.
+
+This would be implemented in the mocked module. Each time we call a
+mocked function, we would store the result of the mock, and then
+execute all of the list of functions which are meant to be executed
+after the mocked function.
+
+We don't need the expectation framework to do this for us, though. We
+could just mock out the recv_all function, and have it cancel the
+task. This would, however, be a nice convenience to have, because it
+separates out the mock function's functionality, and other side
+effects necessary for the test case.
+
+(Another idea) For mocked functions which return unit, we should just
+have a default function which will return unit. This way we can
+automatically generate mock functions which only perform side effects.
